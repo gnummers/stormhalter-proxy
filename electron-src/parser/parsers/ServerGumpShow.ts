@@ -1,6 +1,22 @@
 import { XMLParser } from 'fast-xml-parser';
 import { PacketParser } from '.';
-import { NodeLidgren } from '../../../bin/lidgren/publish/node-lidgren';
+import * as path from 'path';
+import * as fs from 'fs';
+
+const lidgrenPath = path.join(
+  process.resourcesPath,
+  '..',
+  'bin',
+  'lidgren',
+  'publish',
+  'node-lidgren.cjs'
+);
+
+if (!fs.existsSync(lidgrenPath)) {
+  throw new Error('Native Lidgren module not found: ' + lidgrenPath);
+}
+
+const { NodeLidgren } = require(lidgrenPath);
 import { debug } from '../../sendMessage';
 import { getDataFromFragments, PacketCommand } from '../packet';
 import { TypedEventEmitter } from './TypedEventEmitter';

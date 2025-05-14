@@ -3,7 +3,23 @@ import { inventory } from './parser/parsers/ServerContainerContent';
 import { addToQueue } from './parser/parsers/ServerRoundUpdate';
 import { debug } from './sendMessage';
 import { ipcMain } from 'electron';
-import { NodeLidgren } from '../bin/lidgren/publish/node-lidgren';
+import * as path from 'path';
+import * as fs from 'fs';
+
+const lidgrenPath = path.join(
+  process.resourcesPath,
+  '..',
+  'bin',
+  'lidgren',
+  'publish',
+  'node-lidgren.cjs'
+);
+
+if (!fs.existsSync(lidgrenPath)) {
+  throw new Error('Native Lidgren module not found: ' + lidgrenPath);
+}
+
+const { NodeLidgren } = require(lidgrenPath);
 import { ServerCommunicationMessageEventBroker } from './parser/parsers/ServerCommunicationMessage';
 import { ServerGumpShowEventBroker } from './parser/parsers/ServerGumpShow';
 

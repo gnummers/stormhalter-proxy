@@ -8,6 +8,7 @@ import { createOverlayServer } from './overlayServer';
 import { registerGlobalShortcuts } from './globalShortcuts';
 import { menu } from './menu';
 import { addIpcListeners } from './listeners';
+import path from 'path';
 
 const initProxy = (): Proxy => {
     const proxyOptions: UdpProxyOptions = {
@@ -33,12 +34,10 @@ app.on('ready', async () => {
         mainWindow.webContents.openDevTools();
     }
 
-    const url = isDev
-        ? 'http://localhost:8000/'
-        : new URL(
-              '../renderer/out/index.html',
-              `https://${__dirname}`,
-          ).toString();
+
+const url = isDev
+  ? 'http://localhost:8000/'
+  : `file://${path.join(__dirname, '../renderer/out/index.html')}`;
 
     await mainWindow.loadURL(url);
 
