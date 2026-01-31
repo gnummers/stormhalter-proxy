@@ -14,7 +14,7 @@ export default class ExperienceParser {
     };
 
     public parseMessage = (data: string[]): void => {
-        const exp = +data[0];
+        const exp = Number(String(data[0]).replace(/,/g, ''));
         this.experience.set(new Date(), exp);
         this.sessionTotalExperience += exp;
         const ONE_HOUR = 60 * 60 * 1000;
