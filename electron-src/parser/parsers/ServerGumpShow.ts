@@ -1,9 +1,31 @@
-import { XMLParser } from 'fast-xml-parser';
-import { PacketParser } from '.';
-import { NodeLidgren } from '../../../bin/lidgren/publish/node-lidgren';
-import { debug } from '../../sendMessage';
-import { getDataFromFragments, PacketCommand } from '../packet';
-import { TypedEventEmitter } from './TypedEventEmitter';
+import { XMLParser } from "fast-xml-parser";
+import { PacketParser } from ".";
+import fs from "fs";
+import path from "path";
+import isDev from "electron-is-dev";
+import { debug } from "../../sendMessage";
+import { getDataFromFragments, PacketCommand } from "../packet";
+import { TypedEventEmitter } from "./TypedEventEmitter";
+
+// Resolve lidgren base directory
+const lidgrenBasePath = isDev
+  ? path.join(__dirname, "../bin/lidgren/publish") // or "../../../bin/..." for ServerGumpShow.ts
+  : path.join((process as any).resourcesPath, "bin/lidgren/publish");
+
+// Prefer CommonJS entrypoint for require()
+const candidates = [
+  path.join(lidgrenBasePath, "node-lidgren.cjs"),
+  path.join(lidgrenBasePath, "node-lidgren.js"),
+  path.join(lidgrenBasePath, "node-lidgren", "index.js"),
+];
+
+const lidgrenEntry = candidates.find(fs.existsSync);
+if (!lidgrenEntry) {
+  throw new Error(`node-lidgren entry not found. Tried:\n${candidates.join("\n")}`);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { NodeLidgren } = require(lidgrenEntry);
 
 type ServerGumpShowEventTypes = {
     onMessage: [message: any, id: number];

@@ -1,11 +1,37 @@
-import { Packet, sendPacket } from './parser/packet';
-import { inventory } from './parser/parsers/ServerContainerContent';
-import { addToQueue } from './parser/parsers/ServerRoundUpdate';
-import { debug } from './sendMessage';
-import { ipcMain } from 'electron';
-import { NodeLidgren } from '../bin/lidgren/publish/node-lidgren';
-import { ServerCommunicationMessageEventBroker } from './parser/parsers/ServerCommunicationMessage';
-import { ServerGumpShowEventBroker } from './parser/parsers/ServerGumpShow';
+import { Packet, sendPacket } from "./parser/packet";
+import { inventory } from "./parser/parsers/ServerContainerContent";
+import { addToQueue } from "./parser/parsers/ServerRoundUpdate";
+import { debug } from "./sendMessage";
+
+import electron = require("electron");
+const { ipcMain } = electron;
+
+import fs from "fs";
+import path from "path";
+import isDev from "electron-is-dev";
+
+import { ServerCommunicationMessageEventBroker } from "./parser/parsers/ServerCommunicationMessage";
+import { ServerGumpShowEventBroker } from "./parser/parsers/ServerGumpShow";
+
+// Resolve lidgren base directory
+const lidgrenBasePath = isDev
+  ? path.join(__dirname, "../bin/lidgren/publish") // or "../../../bin/..." for ServerGumpShow.ts
+  : path.join((process as any).resourcesPath, "bin/lidgren/publish");
+
+// Prefer CommonJS entrypoint for require()
+const candidates = [
+  path.join(lidgrenBasePath, "node-lidgren.cjs"),
+  path.join(lidgrenBasePath, "node-lidgren.js"),
+  path.join(lidgrenBasePath, "node-lidgren", "index.js"),
+];
+
+const lidgrenEntry = candidates.find(fs.existsSync);
+if (!lidgrenEntry) {
+  throw new Error(`node-lidgren entry not found. Tried:\n${candidates.join("\n")}`);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { NodeLidgren } = require(lidgrenEntry);
 
 export const addIpcListeners = () => {
     ipcMain.on('requestGriffBoots', (_event, ...args) => {

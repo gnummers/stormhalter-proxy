@@ -1,11 +1,19 @@
+import { app } from "electron";
+import path from "node:path";
+import fs from "node:fs";
 import * as net from 'node:net';
 import {
-    ChildProcessWithoutNullStreams,
     exec,
     spawn,
 } from 'node:child_process';
 import { debug } from './sendMessage';
 import { store } from './store';
+
+const getKesmaiOverlayExePath = () => {
+  return app.isPackaged
+    ? path.join(process.resourcesPath, "bin", "KesmaiOverlay.exe")
+    : path.join(process.cwd(), "bin", "KesmaiOverlay.exe");
+};
 
 interface OverlayServer {
     server?: net.Server;
@@ -27,7 +35,8 @@ interface SendMessageOptions {
 
 const connection: OverlayServer = {};
 let isActive = store.get('overlay.isActive');
-let kesmaiOverlayProcess: ChildProcessWithoutNullStreams;
+import type { ChildProcess } from "node:child_process";
+let kesmaiOverlayProcess: ChildProcess | undefined;
 
 export const createOverlayServer = async (): Promise<void> => {
     if (!isActive) {
@@ -51,9 +60,9 @@ const destroyOverlayServer = async (): Promise<void> => {
     connection.client = undefined;
     connection.server = undefined;
 
-    if (await isRunning('KesmaiOverlay.exe')) {
-        debug('Killing KesmaiOverlay.exe');
-        kesmaiOverlayProcess.kill();
+    if (await isRunning("KesmaiOverlay.exe")) {
+    debug("Killing KesmaiOverlay.exe");
+    kesmaiOverlayProcess?.kill();
     }
 };
 
@@ -117,16 +126,23 @@ export const sendOverlayMessage = (
 };
 
 const checkForOverlayProcess = async (): Promise<boolean> => {
-    const clientRunning = await isRunning('Kesmai.Client');
-    const overlayRunning = await isRunning('KesmaiOverlay');
-    if (!clientRunning) {
-        return false;
+  const clientRunning = await isRunning("Kesmai.Client");
+  if (!clientRunning) return false;
+
+  // tasklist shows process names like "KesmaiOverlay.exe"
+  const overlayRunning = await isRunning("KesmaiOverlay.exe");
+  if (!overlayRunning) {
+    const exePath = getKesmaiOverlayExePath();
+
+    if (!fs.existsSync(exePath)) {
+      debug(`KesmaiOverlay.exe not found at: ${exePath}`);
+      return false;
     }
 
-    if (!overlayRunning) {
-        startProcess(`${process.cwd()}\\bin\\KesmaiOverlay.exe`);
-    }
-    return true;
+    startProcess(exePath);
+  }
+
+  return true;
 };
 
 const isRunning = (processName: string) =>
@@ -139,7 +155,10 @@ const isRunning = (processName: string) =>
     });
 
 const startProcess = (processPath: string) => {
-    kesmaiOverlayProcess = spawn(processPath);
+  kesmaiOverlayProcess = spawn(processPath, [], {
+    windowsHide: false,
+    stdio: "ignore",
+  });
 };
 
 export const setOverlayActive = async (state: boolean): Promise<void> => {
@@ -150,5 +169,5 @@ export const setOverlayActive = async (state: boolean): Promise<void> => {
         return;
     }
 
-    destroyOverlayServer();
+    await destroyOverlayServer();
 };

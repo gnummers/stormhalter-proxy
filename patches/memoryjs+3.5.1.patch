@@ -1,0 +1,16 @@
+diff --git a/node_modules/memoryjs/scripts/install.js b/node_modules/memoryjs/scripts/install.js
+index cf65fb5..5a246a1 100644
+--- a/node_modules/memoryjs/scripts/install.js
++++ b/node_modules/memoryjs/scripts/install.js
+@@ -15,7 +15,10 @@ function run(script) {
+   const args = script.split(' ').slice(1);
+ 
+   // inherit stdio to print colour (helpful for warnings/errors readability)
+-  const child = spawn(program, args, { stdio: 'inherit' });
++    const child =
++    process.platform === 'win32'
++      ? spawn('cmd.exe', ['/d', '/s', '/c', program, ...args], { stdio: 'inherit' })
++      : spawn(program, args, { stdio: 'inherit' });
+ 
+   child.on('close', code => console.log(`Script "${script}" exited with ${code}`));
+ }

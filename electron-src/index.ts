@@ -1,58 +1,60 @@
-import { Menu, app, globalShortcut } from 'electron';
-import isDev from 'electron-is-dev';
-import prepareNext from 'electron-next';
-import { createMainWindow } from './appMainWindow';
-import { UdpProxyOptions } from './parser/UdpProxy';
-import Proxy from './parser/Proxy';
-import { createOverlayServer } from './overlayServer';
-import { registerGlobalShortcuts } from './globalShortcuts';
-import { menu } from './menu';
-import { addIpcListeners } from './listeners';
+import { Menu, app, globalShortcut } from "electron";
+import isDev from "electron-is-dev";
+import prepareNext from "electron-next";
+import path from "path";
+// (optional) import { pathToFileURL } from "url";
+
+import { createMainWindow } from "./appMainWindow";
+import { UdpProxyOptions } from "./parser/UdpProxy";
+import Proxy from "./parser/Proxy";
+import { createOverlayServer } from "./overlayServer";
+import { registerGlobalShortcuts } from "./globalShortcuts";
+import { menu } from "./menu";
+import { addIpcListeners } from "./listeners";
 
 const initProxy = (): Proxy => {
-    const proxyOptions: UdpProxyOptions = {
-        remoteAddress: '74.208.130.140',
-        remotePort: 2593,
-        localAddress: '0.0.0.0',
-        localPort: 53535,
-    };
+  const proxyOptions: UdpProxyOptions = {
+    remoteAddress: "74.208.130.140",
+    remotePort: 2593,
+    localAddress: "0.0.0.0",
+    localPort: 53535,
+  };
 
-    const proxy = new Proxy(proxyOptions);
-    return proxy;
+  return new Proxy(proxyOptions);
 };
 
 let proxy: Proxy;
 
-// Prepare the renderer once the app is ready
-app.on('ready', async () => {
-    Menu.setApplicationMenu(menu);
-    await prepareNext('./renderer');
+app.on("ready", async () => {
+  Menu.setApplicationMenu(menu);
 
-    const mainWindow = createMainWindow();
-    if (isDev) {
-        mainWindow.webContents.openDevTools();
-    }
+  // Only needed for dev (it wires up the dev server)
+  if (isDev) {
+    await prepareNext("./renderer");
+  }
 
-    const url = isDev
-        ? 'http://localhost:8000/'
-        : new URL(
-              '../renderer/out/index.html',
-              `https://${__dirname}`,
-          ).toString();
+  const mainWindow = createMainWindow();
 
-    await mainWindow.loadURL(url);
+  if (isDev) {
+    mainWindow.webContents.openDevTools();
+    await mainWindow.loadURL("http://localhost:8000/");
+  } else {
+    const indexHtml = path.join(__dirname, "../renderer/out/index.html");
+    await mainWindow.loadFile(indexHtml);
 
-    proxy = initProxy();
-    await createOverlayServer();
+    // Alternative (also fine):
+    // const indexUrl = pathToFileURL(indexHtml).toString();
+    // await mainWindow.loadURL(indexUrl);
+  }
 
-    registerGlobalShortcuts();
-    addIpcListeners();
+  proxy = initProxy();
+  await createOverlayServer();
+
+  registerGlobalShortcuts();
+  addIpcListeners();
 });
 
-// Quit the app once all windows are closed
-app.on('window-all-closed', app.quit);
-app.on('will-quit', () => {
-    globalShortcut.unregisterAll();
-});
+app.on("window-all-closed", app.quit);
+app.on("will-quit", () => globalShortcut.unregisterAll());
 
 export const getProxy = (): Proxy => proxy;
